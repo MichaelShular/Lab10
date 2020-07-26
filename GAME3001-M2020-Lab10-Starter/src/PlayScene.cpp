@@ -41,6 +41,41 @@ void PlayScene::update()
 	updateDisplayList();
 	m_bPlayerHasLOS = CollisionManager::LOSCheck(m_pPlayer, m_pPlaneSprite, m_pObstacle);
 	
+	if (m_bPatrolMode)
+	{
+		if (m_pPlaneSprite->getTransform()->position.x < m_pPatrolPath[targetNode + 1]->getTransform()->position.x)
+		{
+			/*m_pPlaneSprite->getRigidBody()->velocity = glm::vec2(1.0f, 0.0f);
+			m_pPlaneSprite->getTransform()->position += m_pPlayer->getRigidBody()->velocity;*/
+			++m_pPlaneSprite->getTransform()->position.x;
+		}
+		if (m_pPlaneSprite->getTransform()->position.x > m_pPatrolPath[targetNode + 1]->getTransform()->position.x)
+		{
+			--m_pPlaneSprite->getTransform()->position.x;
+		}
+		if (m_pPlaneSprite->getTransform()->position.y < m_pPatrolPath[targetNode + 1]->getTransform()->position.y)
+		{
+			/*	m_pPlaneSprite->getRigidBody()->velocity = glm::vec2(0.0f, 1.0f);
+				m_pPlaneSprite->getTransform()->position += m_pPlayer->getRigidBody()->velocity;*/
+			++m_pPlaneSprite->getTransform()->position.y;
+		}
+		if (m_pPlaneSprite->getTransform()->position.y > m_pPatrolPath[targetNode + 1]->getTransform()->position.y)
+		{
+			--m_pPlaneSprite->getTransform()->position.y;
+		}
+
+		if (m_pPlaneSprite->getTransform()->position.x == m_pPatrolPath[targetNode + 1]->getTransform()->position.x && m_pPlaneSprite->getTransform()->position.y == m_pPatrolPath[targetNode + 1]->getTransform()->position.y)
+		{
+			++targetNode;
+			if (targetNode >= 30)
+				targetNode = 0;
+		}
+		else
+		{
+			std::cout << m_pPlaneSprite->getTransform()->position.x;
+		}
+		//m_pPlaneSprite->getTransform()->position = m_pPatrolPath[targetNode]->getTransform()->position;
+	}
 
 	CollisionManager::AABBCheck(m_pPlayer, m_pPlaneSprite);
 
@@ -276,19 +311,48 @@ void PlayScene::m_setGridLOS()
 	}
 }
 
+void PlayScene::m_buildPatrolPath()
+{
+	//right
+	for (auto i = 0; i < Config::COL_NUM; i++)
+	{
+		m_pPatrolPath.push_back(m_pGrid[i]);
+	}
+	//down
+	for (auto i = 1; i < Config::ROW_NUM; i++)
+	{
+		m_pPatrolPath.push_back(m_pGrid[i * Config::COL_NUM + Config::COL_NUM - 1]);
+	}
+	//left
+	for (auto i = 1; i < Config::COL_NUM; i++)
+	{
+		m_pPatrolPath.push_back(m_pGrid[Config::COL_NUM * Config::ROW_NUM - 1 - i]);
+	}
+	//up
+	for (auto i = Config::ROW_NUM - 2; i > 0; i--)
+	{
+		m_pPatrolPath.push_back(m_pGrid[i * Config::COL_NUM]);
+	}
+	m_pPatrolPath.push_back(m_pGrid[0]);
+}
+
 void PlayScene::start()
 {
 	m_bPlayerHasLOS = false;
 
 	m_buildGrid();
-	
+	m_buildPatrolPath();
+
 	m_bDebugMode = false;
 	m_bPatrolMode = false;
 	
 	// Plane Sprite
 	m_pPlaneSprite = new Plane();
+	m_pPlaneSprite->getTransform()->position = m_pPatrolPath[0]->getTransform()->position;
 	addChild(m_pPlaneSprite);
-	int a = 1;
+	
+	glm::vec2 nextPosition = m_pPatrolPath[1]->getTransform()->position - m_pPlaneSprite->getTransform()->position;
+	glm::vec2 normalized = Util::normalize(nextPosition);
 	// Player Sprite
 	m_pPlayer = new Player();
 	addChild(m_pPlayer);
